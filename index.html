@@ -69,10 +69,10 @@
                     <div id="events-list" class="mt-6 space-y-4"></div>
                 </div>
             </div>
-             <div id="config-error-view" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-xl shadow-lg">
+             <div id="config-error-view" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-6 rounded-xl shadow-lg">
                 <h2 class="font-bold text-xl">¡Acción Requerida!</h2>
                 <p class="mt-2">La aplicación necesita ser conectada a una base de datos de Firebase para funcionar.</p>
-                <p class="mt-4 text-sm font-mono bg-red-50 p-2 rounded">Por favor, sigue la guía para crear tu proyecto en Firebase, obtén el código de configuración y pégalo en el lugar indicado en el código de esta aplicación.</p>
+                <p class="mt-4 text-sm font-mono bg-yellow-50 p-2 rounded">Por favor, crea un proyecto en Firebase, obtén el código de configuración y pégalo en el lugar indicado en el código de esta aplicación.</p>
             </div>
         </div>
     </div>
@@ -93,9 +93,7 @@
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, onSnapshot, query, serverTimestamp, where, getDocs, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // --- PASO 1: CONFIGURACIÓN DE FIREBASE ---
         // Pega aquí el objeto de configuración que obtuviste de Firebase.
-        // Reemplaza este bloque de ejemplo con el tuyo.
         const firebaseConfig = {
   apiKey: "AIzaSyBxAHHNBbHqoP0Js9nbMs5bPDnpI3UlEAM",
   authDomain: "ld-bus.firebaseapp.com",
@@ -104,7 +102,6 @@
   messagingSenderId: "187148236105",
   appId: "1:187148236105:web:68cfe536d498ef3d4b5698"
 };
-        // -----------------------------------------
 
         let db, auth;
 
@@ -151,11 +148,12 @@
             const createEventBtn = document.getElementById('create-event-button');
             const eventNameInput = document.getElementById('event-name');
             const eventsListDiv = document.getElementById('events-list');
-            const appId = firebaseConfig.appId;
-            const rosterDocRef = doc(db, `artifacts/${appId}/public/data/roster/main`);
+            
+            // RUTA SIMPLIFICADA
+            const rosterDocRef = doc(db, "plantilla", "jugadores");
 
             getDoc(rosterDocRef).then(docSnap => {
-                if (docSnap.exists()) rosterTextarea.value = docSnap.data().players.join('\n');
+                if (docSnap.exists()) rosterTextarea.value = docSnap.data().lista.join('\n');
             }).catch(e => console.warn("No se pudo cargar la plantilla inicial:", e));
 
             saveRosterBtn.addEventListener('click', async () => {
@@ -167,7 +165,8 @@
                 const players = rosterTextarea.value.split('\n').map(p => p.trim()).filter(p => p);
 
                 try {
-                    await setDoc(rosterDocRef, { players });
+                    // USA LA RUTA SIMPLIFICADA
+                    await setDoc(rosterDocRef, { lista: players });
                     rosterStatus.textContent = '¡Plantilla guardada correctamente!';
                     rosterStatus.classList.add('text-green-600');
                     setTimeout(() => rosterStatus.textContent = '', 4000);
@@ -185,15 +184,17 @@
                 const eventName = eventNameInput.value.trim();
                 if (!eventName) return;
                 try {
-                    await addDoc(collection(db, `artifacts/${appId}/public/data/events`), {
-                        name: eventName,
-                        createdAt: serverTimestamp()
+                    // RUTA SIMPLIFICADA
+                    await addDoc(collection(db, "jornadas"), {
+                        nombre: eventName,
+                        creada: serverTimestamp()
                     });
                     eventNameInput.value = '';
                 } catch (e) { console.error(e); }
             });
 
-            const q = query(collection(db, `artifacts/${appId}/public/data/events`));
+            // RUTA SIMPLIFICADA
+            const q = query(collection(db, "jornadas"));
             onSnapshot(q, (snapshot) => {
                 if (snapshot.empty) {
                     eventsListDiv.innerHTML = '<p class="text-center text-gray-500 p-4 border-2 border-dashed rounded-lg">Aún no has creado ninguna jornada.</p>';
@@ -201,7 +202,7 @@
                 }
                 const events = [];
                 snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
-                events.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                events.sort((a, b) => (b.creada?.toMillis() || 0) - (a.creada?.toMillis() || 0));
                 
                 eventsListDiv.innerHTML = '';
                 events.forEach(event => {
@@ -209,9 +210,9 @@
                     eventEl.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
                     eventEl.innerHTML = `
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                            <div><h3 class="font-bold text-lg">${event.name}</h3><p class="text-sm text-gray-500">${event.createdAt ? new Date(event.createdAt.seconds * 1000).toLocaleString('es-ES') : ''}</p></div>
+                            <div><h3 class="font-bold text-lg">${event.nombre}</h3><p class="text-sm text-gray-500">${event.creada ? new Date(event.creada.seconds * 1000).toLocaleString('es-ES') : ''}</p></div>
                             <div class="flex gap-2 mt-3 sm:mt-0">
-                                <button data-event-id="${event.id}" data-event-name="${event.name}" class="show-qr-btn bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-blue-600">Ver QR</button>
+                                <button data-event-id="${event.id}" data-event-name="${event.nombre}" class="show-qr-btn bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-blue-600">Ver QR</button>
                                 <button data-event-id="${event.id}" class="toggle-checkins-btn bg-gray-600 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-gray-700">Ver Registros</button>
                             </div>
                         </div>
@@ -258,10 +259,10 @@
         }
 
         function loadCheckins(eventId) {
-            const appId = firebaseConfig.appId;
             const checkinsDiv = document.getElementById(`checkins-${eventId}`);
             checkinsDiv.innerHTML = '<p class="text-gray-500">Cargando...</p>';
-            const q = query(collection(db, `artifacts/${appId}/public/data/events/${eventId}/checkins`));
+            // RUTA SIMPLIFICADA
+            const q = query(collection(db, `jornadas/${eventId}/fichajes`));
             onSnapshot(q, (snapshot) => {
                 if (snapshot.empty) {
                     checkinsDiv.innerHTML = '<p class="text-center text-gray-500">Nadie ha registrado su llegada.</p>';
@@ -269,10 +270,10 @@
                 }
                 let checkins = [];
                 snapshot.forEach(doc => checkins.push(doc.data()));
-                checkins.sort((a,b) => (a.checkinTime?.toMillis() || 0) - (b.checkinTime?.toMillis() || 0));
+                checkins.sort((a,b) => (a.horaFichaje?.toMillis() || 0) - (b.horaFichaje?.toMillis() || 0));
                 let tableHTML = `<table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-6 py-3">Jugador</th><th scope="col" class="px-6 py-3">Hora</th></tr></thead><tbody>`;
                 checkins.forEach(c => {
-                    tableHTML += `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${c.playerName}</td><td class="px-6 py-4">${new Date(c.checkinTime.seconds * 1000).toLocaleTimeString('es-ES')}</td></tr>`;
+                    tableHTML += `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${c.nombreJugador}</td><td class="px-6 py-4">${new Date(c.horaFichaje.seconds * 1000).toLocaleTimeString('es-ES')}</td></tr>`;
                 });
                 checkinsDiv.innerHTML = tableHTML + '</tbody></table>';
             });
@@ -298,11 +299,11 @@
         async function setupIdentification(eventId) {
             const playerSelect = document.getElementById('player-select');
             const confirmBtn = document.getElementById('confirm-identity-button');
-            const appId = firebaseConfig.appId;
-            const rosterDocRef = doc(db, `artifacts/${appId}/public/data/roster/main`);
+            // RUTA SIMPLIFICADA
+            const rosterDocRef = doc(db, "plantilla", "jugadores");
             const rosterDoc = await getDoc(rosterDocRef);
             if (rosterDoc.exists()) {
-                const players = rosterDoc.data().players || [];
+                const players = rosterDoc.data().lista || [];
                 playerSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>';
                 const storedProfile = JSON.parse(localStorage.getItem('playerProfile'));
                 if (storedProfile && !players.includes(storedProfile.name)) {
@@ -331,21 +332,22 @@
             const greetingEl = document.getElementById('player-greeting');
             const messageEl = document.getElementById('player-message');
             const eventNameEl = document.getElementById('loading-event-name');
-            const appId = firebaseConfig.appId;
             try {
-                const eventDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/events/${eventId}`));
-                const eventName = eventDoc.exists() ? eventDoc.data().name : "un evento";
+                // RUTA SIMPLIFICADA
+                const eventDoc = await getDoc(doc(db, "jornadas", eventId));
+                const eventName = eventDoc.exists() ? eventDoc.data().nombre : "una jornada";
                 eventNameEl.textContent = `Para: ${eventName}`;
-                const checkinRef = collection(db, `artifacts/${appId}/public/data/events/${eventId}/checkins`);
-                const qCheckin = query(checkinRef, where("playerName", "==", playerName), limit(1));
+                // RUTA SIMPLIFICADA
+                const checkinRef = collection(db, `jornadas/${eventId}/fichajes`);
+                const qCheckin = query(checkinRef, where("nombreJugador", "==", playerName), limit(1));
                 const existingCheckinSnap = await getDocs(qCheckin);
                 if (!existingCheckinSnap.empty) {
                     const existingData = existingCheckinSnap.docs[0].data();
-                    const time = new Date(existingData.checkinTime.seconds * 1000).toLocaleTimeString('es-ES');
+                    const time = new Date(existingData.horaFichaje.seconds * 1000).toLocaleTimeString('es-ES');
                     greetingEl.textContent = `¡Hola de nuevo, ${playerName}!`;
                     messageEl.textContent = `Ya habías registrado tu llegada para "${eventName}" a las ${time}.`;
                 } else {
-                    await addDoc(checkinRef, { playerName: playerName, checkinTime: serverTimestamp() });
+                    await addDoc(checkinRef, { nombreJugador: playerName, horaFichaje: serverTimestamp() });
                     greetingEl.textContent = `✅ ¡Bienvenido, ${playerName}!`;
                     messageEl.textContent = `Tu llegada para "${eventName}" ha sido registrada.`;
                 }
