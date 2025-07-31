@@ -28,7 +28,7 @@
                         <select id="player-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                             <option value="">-- Cargando plantilla... --</option>
                         </select>
-                        <button id="confirm-identity-button" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Confirmar y Registrar Llegada</button>
+                        <button id="confirm-identity-button" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300">Confirmar y Registrar Llegada</button>
                     </div>
                 </div>
                 <div id="player-checkin-step" class="hidden">
@@ -95,13 +95,13 @@
 
         // Pega aquí el objeto de configuración que obtuviste de Firebase.
         const firebaseConfig = {
-  apiKey: "AIzaSyBxAHHNBbHqoP0Js9nbMs5bPDnpI3UlEAM",
-  authDomain: "ld-bus.firebaseapp.com",
-  projectId: "ld-bus",
-  storageBucket: "ld-bus.firebasestorage.app",
-  messagingSenderId: "187148236105",
-  appId: "1:187148236105:web:68cfe536d498ef3d4b5698"
-};
+          apiKey: "AIzaSyBxAHHNBbHqoP0Js9nbMs5bPDnpI3UlEAM",
+          authDomain: "ld-bus.firebaseapp.com",
+          projectId: "ld-bus",
+          storageBucket: "ld-bus.appspot.com",
+          messagingSenderId: "187148236105",
+          appId: "1:187148236105:web:68cfe536d498ef3d4b5698"
+        };
 
         let db, auth;
 
@@ -149,7 +149,6 @@
             const eventNameInput = document.getElementById('event-name');
             const eventsListDiv = document.getElementById('events-list');
             
-            // RUTA SIMPLIFICADA
             const rosterDocRef = doc(db, "plantilla", "jugadores");
 
             getDoc(rosterDocRef).then(docSnap => {
@@ -165,7 +164,6 @@
                 const players = rosterTextarea.value.split('\n').map(p => p.trim()).filter(p => p);
 
                 try {
-                    // USA LA RUTA SIMPLIFICADA
                     await setDoc(rosterDocRef, { lista: players });
                     rosterStatus.textContent = '¡Plantilla guardada correctamente!';
                     rosterStatus.classList.add('text-green-600');
@@ -184,7 +182,6 @@
                 const eventName = eventNameInput.value.trim();
                 if (!eventName) return;
                 try {
-                    // RUTA SIMPLIFICADA
                     await addDoc(collection(db, "jornadas"), {
                         nombre: eventName,
                         creada: serverTimestamp()
@@ -193,7 +190,6 @@
                 } catch (e) { console.error(e); }
             });
 
-            // RUTA SIMPLIFICADA
             const q = query(collection(db, "jornadas"));
             onSnapshot(q, (snapshot) => {
                 if (snapshot.empty) {
@@ -261,7 +257,6 @@
         function loadCheckins(eventId) {
             const checkinsDiv = document.getElementById(`checkins-${eventId}`);
             checkinsDiv.innerHTML = '<p class="text-gray-500">Cargando...</p>';
-            // RUTA SIMPLIFICADA
             const q = query(collection(db, `jornadas/${eventId}/fichajes`));
             onSnapshot(q, (snapshot) => {
                 if (snapshot.empty) {
@@ -299,23 +294,36 @@
         async function setupIdentification(eventId) {
             const playerSelect = document.getElementById('player-select');
             const confirmBtn = document.getElementById('confirm-identity-button');
-            // RUTA SIMPLIFICADA
             const rosterDocRef = doc(db, "plantilla", "jugadores");
-            const rosterDoc = await getDoc(rosterDocRef);
-            if (rosterDoc.exists()) {
-                const players = rosterDoc.data().lista || [];
-                playerSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>';
-                const storedProfile = JSON.parse(localStorage.getItem('playerProfile'));
-                if (storedProfile && !players.includes(storedProfile.name)) {
-                    localStorage.removeItem('playerProfile'); 
+
+            try {
+                const rosterDoc = await getDoc(rosterDocRef);
+                if (rosterDoc.exists() && rosterDoc.data().lista && rosterDoc.data().lista.length > 0) {
+                    const players = rosterDoc.data().lista;
+                    playerSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>';
+                    
+                    const storedProfile = JSON.parse(localStorage.getItem('playerProfile'));
+                    if (storedProfile && !players.includes(storedProfile.name)) {
+                        localStorage.removeItem('playerProfile'); 
+                    }
+
+                    players.forEach(player => {
+                        const option = document.createElement('option');
+                        option.value = player;
+                        option.textContent = player;
+                        playerSelect.appendChild(option);
+                    });
+                } else {
+                    console.error("Plantilla no encontrada o está vacía.");
+                    playerSelect.innerHTML = '<option value="">-- Plantilla no disponible --</option>';
+                    confirmBtn.disabled = true;
                 }
-                players.forEach(player => {
-                    const option = document.createElement('option');
-                    option.value = player;
-                    option.textContent = player;
-                    playerSelect.appendChild(option);
-                });
+            } catch (error) {
+                console.error("Error al cargar la plantilla:", error);
+                playerSelect.innerHTML = '<option value="">-- Error al cargar --</option>';
+                confirmBtn.disabled = true;
             }
+
             confirmBtn.addEventListener('click', async () => {
                 const selectedPlayer = playerSelect.value;
                 if (!selectedPlayer) { alert('Debes seleccionar tu nombre.'); return; }
@@ -333,11 +341,9 @@
             const messageEl = document.getElementById('player-message');
             const eventNameEl = document.getElementById('loading-event-name');
             try {
-                // RUTA SIMPLIFICADA
                 const eventDoc = await getDoc(doc(db, "jornadas", eventId));
                 const eventName = eventDoc.exists() ? eventDoc.data().nombre : "una jornada";
                 eventNameEl.textContent = `Para: ${eventName}`;
-                // RUTA SIMPLIFICADA
                 const checkinRef = collection(db, `jornadas/${eventId}/fichajes`);
                 const qCheckin = query(checkinRef, where("nombreJugador", "==", playerName), limit(1));
                 const existingCheckinSnap = await getDocs(qCheckin);
