@@ -158,26 +158,30 @@
                 if (docSnap.exists()) rosterTextarea.value = docSnap.data().players.join('\n');
             });
 
-            saveRosterBtn.addEventListener('click', async () => {
+            // *** CÓDIGO CORREGIDO ***
+            saveRosterBtn.addEventListener('click', () => {
                 saveRosterBtn.disabled = true;
                 saveRosterBtn.textContent = 'Guardando...';
                 rosterStatus.textContent = '';
                 rosterStatus.classList.remove('text-red-600', 'text-green-600');
 
                 const players = rosterTextarea.value.split('\n').map(p => p.trim()).filter(p => p);
-                try {
-                    await setDoc(rosterDocRef, { players });
-                    rosterStatus.textContent = '¡Plantilla guardada correctamente!';
-                    rosterStatus.classList.add('text-green-600');
-                    setTimeout(() => rosterStatus.textContent = '', 4000);
-                } catch (e) {
-                    console.error("Error al guardar la plantilla:", e);
-                    rosterStatus.textContent = 'Error al guardar la plantilla.';
-                    rosterStatus.classList.add('text-red-600');
-                } finally {
-                    saveRosterBtn.disabled = false;
-                    saveRosterBtn.textContent = 'Guardar Plantilla';
-                }
+                
+                setDoc(rosterDocRef, { players })
+                    .then(() => {
+                        rosterStatus.textContent = '¡Plantilla guardada correctamente!';
+                        rosterStatus.classList.add('text-green-600');
+                        setTimeout(() => rosterStatus.textContent = '', 4000);
+                    })
+                    .catch((e) => {
+                        console.error("Error al guardar la plantilla:", e);
+                        rosterStatus.textContent = 'Error al guardar. Revisa la conexión o los permisos.';
+                        rosterStatus.classList.add('text-red-600');
+                    })
+                    .finally(() => {
+                        saveRosterBtn.disabled = false;
+                        saveRosterBtn.textContent = 'Guardar Plantilla';
+                    });
             });
 
             createEventBtn.addEventListener('click', async () => {
