@@ -228,15 +228,18 @@
                             </div>
                             <div class="flex flex-wrap gap-2 mt-3 sm:mt-0">
                                 <button data-event-id="${event.id}" data-event-name="${event.nombre}" class="show-qr-btn bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-blue-600">Ver QR</button>
+                                <button data-event-id="${event.id}" class="toggle-checkins-btn bg-gray-600 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-gray-700">Ver Registros</button>
                                 <button data-event-id="${event.id}" data-event-name="${event.nombre}" class="delete-jornada-btn bg-red-500 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-red-600">Eliminar</button>
                             </div>
-                        </div>`;
+                        </div>
+                        <div id="checkins-${event.id}" class="hidden mt-4 pt-4 border-t border-gray-200"></div>`;
                     eventsListDiv.appendChild(eventEl);
                 });
             });
             
             eventsListDiv.addEventListener('click', (e) => {
                 if (e.target.classList.contains('show-qr-btn')) showQrModal(e.target.dataset.eventId, e.target.dataset.eventName);
+                if (e.target.classList.contains('toggle-checkins-btn')) toggleCheckinsView(e.target.dataset.eventId, e.target);
                 if (e.target.classList.contains('delete-jornada-btn')) promptDeleteJornada(e.target.dataset.eventId, e.target.dataset.eventName);
             });
 
@@ -262,6 +265,36 @@
                  modal.classList.add('opacity-0');
                  setTimeout(() => modal.classList.add('hidden'), 250);
             };
+        }
+
+        function toggleCheckinsView(eventId, button) {
+            const checkinsDiv = document.getElementById(`checkins-${eventId}`);
+            const isHidden = checkinsDiv.classList.contains('hidden');
+            button.textContent = isHidden ? 'Ver Registros' : 'Ocultar Registros';
+            button.classList.toggle('bg-gray-600', !isHidden);
+            button.classList.toggle('bg-red-500', isHidden);
+            checkinsDiv.classList.toggle('hidden');
+            if (isHidden) loadCheckins(eventId);
+        }
+
+        function loadCheckins(eventId) {
+            const checkinsDiv = document.getElementById(`checkins-${eventId}`);
+            checkinsDiv.innerHTML = '<p class="text-gray-500">Cargando...</p>';
+            const q = query(collection(db, `jornadas/${eventId}/fichajes`), orderBy("horaFichaje", "asc"));
+            onSnapshot(q, (snapshot) => {
+                if (snapshot.empty) {
+                    checkinsDiv.innerHTML = '<p class="text-center text-gray-500">Nadie ha registrado su llegada para esta jornada.</p>';
+                    return;
+                }
+                let checkins = [];
+                snapshot.forEach(doc => checkins.push(doc.data()));
+                
+                let tableHTML = `<table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-6 py-3">Jugador</th><th scope="col" class="px-6 py-3">Hora de Fichaje</th></tr></thead><tbody>`;
+                checkins.forEach(c => {
+                    tableHTML += `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${c.nombreJugador}</td><td class="px-6 py-4">${new Date(c.horaFichaje.seconds * 1000).toLocaleTimeString('es-ES')}</td></tr>`;
+                });
+                checkinsDiv.innerHTML = tableHTML + '</tbody></table>';
+            });
         }
 
         async function showAttendanceModal() {
