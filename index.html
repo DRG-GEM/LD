@@ -277,24 +277,39 @@
             if (isHidden) loadCheckins(eventId);
         }
 
-        function loadCheckins(eventId) {
+        async function loadCheckins(eventId) {
             const checkinsDiv = document.getElementById(`checkins-${eventId}`);
             checkinsDiv.innerHTML = '<p class="text-gray-500">Cargando...</p>';
-            const q = query(collection(db, `jornadas/${eventId}/fichajes`), orderBy("horaFichaje", "asc"));
-            onSnapshot(q, (snapshot) => {
-                if (snapshot.empty) {
-                    checkinsDiv.innerHTML = '<p class="text-center text-gray-500">Nadie ha registrado su llegada para esta jornada.</p>';
-                    return;
-                }
-                let checkins = [];
-                snapshot.forEach(doc => checkins.push(doc.data()));
+
+            try {
+                const jornadaDoc = await getDoc(doc(db, "jornadas", eventId));
+                if (!jornadaDoc.exists()) throw new Error("Jornada no encontrada.");
                 
-                let tableHTML = `<table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-6 py-3">Jugador</th><th scope="col" class="px-6 py-3">Hora de Fichaje</th></tr></thead><tbody>`;
-                checkins.forEach(c => {
-                    tableHTML += `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${c.nombreJugador}</td><td class="px-6 py-4">${new Date(c.horaFichaje.seconds * 1000).toLocaleTimeString('es-ES')}</td></tr>`;
+                const jornadaData = jornadaDoc.data();
+                const citacionDateTime = new Date(`${jornadaData.fechaCitacion}T${jornadaData.horaCitacion}`);
+
+                const q = query(collection(db, `jornadas/${eventId}/fichajes`), orderBy("horaFichaje", "asc"));
+                onSnapshot(q, (snapshot) => {
+                    if (snapshot.empty) {
+                        checkinsDiv.innerHTML = '<p class="text-center text-gray-500">Nadie ha registrado su llegada para esta jornada.</p>';
+                        return;
+                    }
+                    let checkins = [];
+                    snapshot.forEach(doc => checkins.push(doc.data()));
+                    
+                    let tableHTML = `<table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-6 py-3">Jugador</th><th scope="col" class="px-6 py-3">Hora de Fichaje</th><th scope="col" class="px-6 py-3 text-center">Puntualidad</th></tr></thead><tbody>`;
+                    checkins.forEach(c => {
+                        const horaFichaje = c.horaFichaje.toDate();
+                        const isLate = horaFichaje > citacionDateTime;
+                        const statusIcon = isLate ? '🟠' : '✅';
+                        tableHTML += `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${c.nombreJugador}</td><td class="px-6 py-4">${horaFichaje.toLocaleTimeString('es-ES')}</td><td class="px-6 py-4 text-center text-xl">${statusIcon}</td></tr>`;
+                    });
+                    checkinsDiv.innerHTML = tableHTML + '</tbody></table>';
                 });
-                checkinsDiv.innerHTML = tableHTML + '</tbody></table>';
-            });
+            } catch (error) {
+                console.error("Error al cargar los registros de la jornada:", error);
+                checkinsDiv.innerHTML = '<p class="text-center text-red-500">No se pudieron cargar los registros.</p>';
+            }
         }
 
         async function showAttendanceModal() {
@@ -345,8 +360,7 @@
                         const key = `${data.codigoJugador}-${jornada.id}`;
                         const horaFichaje = data.horaFichaje.toDate();
                         
-                        const [h, m] = jornada.horaCitacion.split(':');
-                        const citacionDateTime = new Date(jornada.fechaCitacion + 'T' + jornada.horaCitacion);
+                        const citacionDateTime = new Date(`${jornada.fechaCitacion}T${jornada.horaCitacion}`);
                         
                         attendanceMap.set(key, { presente: true, tarde: horaFichaje > citacionDateTime });
                     });
