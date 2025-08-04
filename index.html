@@ -11,7 +11,6 @@
         body { font-family: 'Inter', sans-serif; }
         .modal { transition: opacity 0.25s ease; }
         .modal-content { transition: transform 0.25s ease; }
-        /* Estilos para la tabla de asistencia con cabecera fija */
         #attendance-table-container { max-height: 70vh; }
         #attendance-table th, #attendance-table td { white-space: nowrap; }
         #attendance-table thead th { position: sticky; top: 0; z-index: 10; }
@@ -447,37 +446,41 @@
 
         async function initPlayerView(eventId) {
             const playerProfile = JSON.parse(localStorage.getItem('playerProfile'));
+            
             document.getElementById('reset-identity-button').addEventListener('click', () => {
                 localStorage.removeItem('playerProfile');
                 window.location.reload();
             });
-            if (playerProfile && playerProfile.name) {
+
+            // *** LÓGICA CORREGIDA ***
+            const rosterDocRef = doc(db, "plantilla", "jugadores");
+            const rosterDoc = await getDoc(rosterDocRef);
+            const currentRoster = (rosterDoc.exists() && rosterDoc.data().lista) ? rosterDoc.data().lista : [];
+            const isPlayerStillOnRoster = playerProfile && playerProfile.name && currentRoster.includes(playerProfile.name);
+
+            if (isPlayerStillOnRoster) {
+                // Player is identified and still valid, register arrival directly
                 document.getElementById('player-identification-step').classList.add('hidden');
                 document.getElementById('player-checkin-step').classList.remove('hidden');
                 await registerCheckin(eventId, playerProfile.name);
             } else {
+                // Player is not identified or is no longer on the roster
+                if (playerProfile) {
+                    localStorage.removeItem('playerProfile'); // Clean up invalid profile
+                }
                 document.getElementById('player-identification-step').classList.remove('hidden');
                 document.getElementById('player-checkin-step').classList.add('hidden');
-                await setupIdentification(eventId);
+                await setupIdentification(eventId, currentRoster); // Pass the roster to avoid fetching it again
             }
         }
 
-        async function setupIdentification(eventId) {
+        async function setupIdentification(eventId, players) {
             const playerSelect = document.getElementById('player-select');
             const confirmBtn = document.getElementById('confirm-identity-button');
-            const rosterDocRef = doc(db, "plantilla", "jugadores");
-
+            
             try {
-                const rosterDoc = await getDoc(rosterDocRef);
-                if (rosterDoc.exists() && rosterDoc.data().lista && rosterDoc.data().lista.length > 0) {
-                    const players = rosterDoc.data().lista;
+                if (players && players.length > 0) {
                     playerSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>';
-                    
-                    const storedProfile = JSON.parse(localStorage.getItem('playerProfile'));
-                    if (storedProfile && !players.includes(storedProfile.name)) {
-                        localStorage.removeItem('playerProfile'); 
-                    }
-
                     players.forEach(player => {
                         const option = document.createElement('option');
                         option.value = player;
