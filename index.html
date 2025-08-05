@@ -278,12 +278,20 @@
 
         function toggleCheckinsView(eventId, button) {
             const checkinsDiv = document.getElementById(`checkins-${eventId}`);
-            const isHidden = checkinsDiv.classList.contains('hidden');
-            button.textContent = isHidden ? 'Ver Registros' : 'Ocultar Registros';
-            button.classList.toggle('bg-gray-600', !isHidden);
-            button.classList.toggle('bg-red-500', isHidden);
-            checkinsDiv.classList.toggle('hidden');
-            if (isHidden) loadCheckins(eventId);
+            if (checkinsDiv.classList.contains('hidden')) {
+                // It's hidden, so show it
+                checkinsDiv.classList.remove('hidden');
+                button.textContent = 'Ocultar Registros';
+                button.classList.remove('bg-gray-600');
+                button.classList.add('bg-red-500');
+                loadCheckins(eventId);
+            } else {
+                // It's visible, so hide it
+                checkinsDiv.classList.add('hidden');
+                button.textContent = 'Ver Registros';
+                button.classList.add('bg-gray-600');
+                button.classList.remove('bg-red-500');
+            }
         }
 
         async function loadCheckins(eventId) {
