@@ -325,7 +325,13 @@
             const modal = document.getElementById('attendance-modal');
             modal.innerHTML = `
                 <div class="modal-content bg-white p-6 rounded-2xl shadow-2xl w-full max-w-6xl text-center transform scale-95 flex flex-col">
-                    <h3 class="text-xl font-bold mb-4">Control de Asistencia General</h3>
+                    <h3 class="text-xl font-bold mb-2">Control de Asistencia General</h3>
+                    <div class="flex justify-center gap-4 mb-4 text-sm">
+                        <span class="flex items-center"><span class="text-xl mr-2">✅</span> A tiempo</span>
+                        <span class="flex items-center"><span class="text-xl mr-2">🟠</span> Tarde</span>
+                        <span class="flex items-center"><span class="text-xl mr-2">❌</span> Ausente</span>
+                        <span class="flex items-center"><span class="text-xl mr-2">🔵</span> Justificada</span>
+                    </div>
                     <div id="attendance-table-container" class="overflow-auto border border-gray-200 rounded-lg">
                         <p class="text-center p-10 text-gray-600">Cargando datos de asistencia...</p>
                     </div>
