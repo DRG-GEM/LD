@@ -28,6 +28,7 @@
         <!-- Vista del Jugador (Fichaje por Código) -->
         <div id="player-view" class="hidden">
             <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
+                <!-- Vista de identificación inicial -->
                 <div id="player-checkin-step">
                     <h1 class="text-2xl md:text-3xl font-bold text-indigo-600">Registro de Asistencia</h1>
                     <p class="text-gray-500 mt-2">Introduce tu código personal para registrar tu llegada.</p>
@@ -37,6 +38,14 @@
                         <button id="submit-code-button" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300">Registrar Llegada</button>
                     </div>
                 </div>
+                <!-- Vista de registro automático -->
+                 <div id="auto-checkin-view" class="hidden">
+                    <h1 class="text-2xl md:text-3xl font-bold text-indigo-600">¡Hola de nuevo, <span id="player-name"></span>!</h1>
+                    <p class="text-gray-500 mt-2">Pulsa para confirmar tu llegada.</p>
+                    <button id="auto-submit-button" class="mt-8 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Registrar Llegada</button>
+                    <button id="reset-identity-button" class="mt-4 text-sm text-gray-500 hover:underline">¿No eres tú? Cambiar de jugador</button>
+                </div>
+                <!-- Vista de resultado -->
                 <div id="result-view" class="hidden">
                      <h1 id="player-greeting" class="text-2xl md:text-3xl font-bold"></h1>
                      <p id="player-message" class="text-gray-600 mt-2 text-lg"></p>
@@ -485,28 +494,38 @@
         // --- LÓGICA DEL JUGADOR ---
         async function initPlayerView(eventId) {
             const checkinStep = document.getElementById('player-checkin-step');
+            const autoCheckinView = document.getElementById('auto-checkin-view');
             const resultView = document.getElementById('result-view');
             const greetingEl = document.getElementById('player-greeting');
             const messageEl = document.getElementById('player-message');
-            const submitBtn = document.getElementById('submit-code-button');
+            const submitCodeBtn = document.getElementById('submit-code-button');
+            const autoSubmitBtn = document.getElementById('auto-submit-button');
+            const resetIdentityBtn = document.getElementById('reset-identity-button');
 
-            submitBtn.addEventListener('click', async () => {
-                const code = document.getElementById('player-code').value.trim();
-                if (!code) { alert('Por favor, introduce tu código.'); return; }
-                
-                submitBtn.disabled = true;
-                submitBtn.textContent = "Validando...";
+            const savedCode = localStorage.getItem('playerCode');
+
+            const rosterDoc = await getDoc(doc(db, "plantilla", "jugadores"));
+            const players = rosterDoc.exists() ? rosterDoc.data().lista : [];
+            const savedPlayer = savedCode ? players.find(p => p.codigo === savedCode) : null;
+
+            if (savedPlayer) {
+                document.getElementById('player-name').textContent = savedPlayer.nombre;
+                checkinStep.classList.add('hidden');
+                autoCheckinView.classList.remove('hidden');
+            } else {
+                localStorage.removeItem('playerCode');
+                autoCheckinView.classList.add('hidden');
+                checkinStep.classList.remove('hidden');
+            }
+
+            const registerCheckin = async (code, button) => {
+                button.disabled = true;
+                button.textContent = "Registrando...";
 
                 try {
-                    const rosterDoc = await getDoc(doc(db, "plantilla", "jugadores"));
-                    const players = rosterDoc.exists() ? rosterDoc.data().lista : [];
                     const player = players.find(p => p.codigo === code);
+                    if (!player) throw new Error("Código de jugador no válido o jugador eliminado.");
 
-                    if (!player) {
-                        throw new Error("Código de jugador no encontrado.");
-                    }
-                    
-                    submitBtn.textContent = "Registrando...";
                     const eventDoc = await getDoc(doc(db, "jornadas", eventId));
                     const eventName = eventDoc.exists() ? eventDoc.data().nombre : "una jornada";
 
@@ -523,13 +542,31 @@
                         messageEl.textContent = `Tu llegada para "${eventName}" ha sido registrada.`;
                     }
                     checkinStep.classList.add('hidden');
+                    autoCheckinView.classList.add('hidden');
                     resultView.classList.remove('hidden');
 
                 } catch (error) {
                     alert('Error: ' + error.message);
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = "Registrar Llegada";
+                    button.disabled = false;
+                    button.textContent = "Registrar Llegada";
                 }
+            };
+
+            submitCodeBtn.addEventListener('click', () => {
+                const code = document.getElementById('player-code').value.trim();
+                if (!code) { alert('Por favor, introduce tu código.'); return; }
+                localStorage.setItem('playerCode', code);
+                registerCheckin(code, submitCodeBtn);
+            });
+
+            autoSubmitBtn.addEventListener('click', () => {
+                const code = localStorage.getItem('playerCode');
+                registerCheckin(code, autoSubmitBtn);
+            });
+
+            resetIdentityBtn.addEventListener('click', () => {
+                localStorage.removeItem('playerCode');
+                window.location.reload();
             });
         }
     </script>
