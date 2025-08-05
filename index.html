@@ -6,12 +6,17 @@
     <title>Control de Asistencia del Equipo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@600;700&display=swap" rel="stylesheet">
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
-            background-color: #f8fafc; /* Color de fondo base */
-            background-image: radial-gradient(circle at top left, #eff6ff, #f8fafc);
+            background-color: #f8fafc;
+            background-image: radial-gradient(circle at top left, #e0e7ff, #f8fafc);
+        }
+        h1, h2, h3 {
+             font-family: 'Lexend', sans-serif;
         }
         .modal { 
             transition: opacity 0.3s ease; 
@@ -25,8 +30,8 @@
         }
         #attendance-table-container { max-height: 70vh; }
         #attendance-table th, #attendance-table td { white-space: nowrap; }
-        #attendance-table thead th { position: sticky; top: 0; z-index: 10; }
-        #attendance-table tbody th { position: sticky; left: 0; z-index: 5; }
+        #attendance-table thead th { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
+        #attendance-table tbody th { position: sticky; left: 0; z-index: 5; background-color: #ffffff; }
         #attendance-table thead th:first-child,
         #attendance-table tbody th {
             z-index: 20;
@@ -36,8 +41,14 @@
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         }
         .btn:hover {
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            filter: brightness(1.1);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
@@ -46,16 +57,16 @@
     <div id="app" class="container mx-auto p-4 md:p-6 max-w-5xl">
         
         <!-- Encabezado -->
-        <header class="flex items-center justify-between pb-4 border-b border-gray-200 mb-8">
+        <header class="flex items-center justify-between pb-4 border-b border-gray-200/80 mb-8">
             <div class="flex items-center gap-3">
                 <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                <h1 class="text-2xl font-bold text-gray-800">Control de Fichajes</h1>
+                <h1 class="text-3xl font-bold text-gray-800">Control de Fichajes</h1>
             </div>
         </header>
 
         <!-- Vista del Jugador (Fichaje por Código) -->
         <div id="player-view" class="hidden">
-            <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg text-center max-w-md mx-auto">
+            <div class="card p-6 md:p-8 rounded-2xl shadow-xl text-center max-w-md mx-auto">
                 <!-- Vista de identificación inicial -->
                 <div id="player-checkin-step">
                     <h1 class="text-2xl md:text-3xl font-bold text-indigo-600">Registro de Asistencia</h1>
@@ -84,24 +95,24 @@
         <!-- Vista del Entrenador (Admin) -->
         <div id="coach-view">
             <header class="mb-8">
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Panel de Control del Equipo</h1>
+                <h1 class="text-4xl font-bold text-gray-900">Panel de Control</h1>
                 <p class="text-gray-600 mt-1">Gestiona la plantilla, crea jornadas y controla la asistencia.</p>
                 <button id="show-attendance-btn" class="btn mt-4 bg-teal-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-teal-600 transition">Ver Asistencia General</button>
             </header>
             <div id="main-coach-panel" class="hidden">
-                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
-                    <h2 class="text-xl font-bold mb-4 flex items-center"><svg class="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>Plantilla del Equipo</h2>
+                <div class="card p-6 rounded-2xl shadow-xl mb-6">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center"><svg class="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>Plantilla del Equipo</h2>
                     <p class="text-sm text-gray-500 mb-3">Introduce los jugadores en formato: <b>código, nombre</b> (uno por línea).</p>
-                    <textarea id="player-roster" class="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="101, Juan Pérez&#10;102, Marcos García&#10;..."></textarea>
+                    <textarea id="player-roster" class="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white/50" placeholder="101, Juan Pérez&#10;102, Marcos García&#10;..."></textarea>
                     <button id="save-roster-button" class="btn mt-4 bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400">Guardar Plantilla</button>
                     <p id="roster-status" class="text-sm mt-2"></p>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-lg">
-                    <h2 class="text-xl font-bold mb-4 flex items-center"><svg class="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>Jornadas</h2>
+                <div class="card p-6 rounded-2xl shadow-xl">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center"><svg class="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>Jornadas</h2>
                     <div class="flex flex-col sm:flex-row gap-3">
-                        <input type="text" id="event-name" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Nombre de la Jornada">
-                        <input type="date" id="event-date" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" title="Fecha de la citación">
-                        <input type="time" id="event-time" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" title="Hora de la citación">
+                        <input type="text" id="event-name" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white/50" placeholder="Nombre de la Jornada">
+                        <input type="date" id="event-date" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white/50" title="Fecha de la citación">
+                        <input type="time" id="event-time" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white/50" title="Hora de la citación">
                         <button id="create-event-button" class="btn bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition">Crear Jornada</button>
                     </div>
                     <div id="events-list" class="mt-6 space-y-4"></div>
